@@ -1,0 +1,308 @@
+------------------------------------------------------------
+-- EXERCISE 3 : STORED PROCEDURES
+-- Name : Banking Management System
+------------------------------------------------------------
+
+SET SERVEROUTPUT ON;
+
+------------------------------------------------------------
+-- STEP 1 : CREATE TABLES
+------------------------------------------------------------
+
+CREATE TABLE Customers (
+    CustomerID NUMBER PRIMARY KEY,
+    Name VARCHAR2(100),
+    DOB DATE,
+    Balance NUMBER,
+    LastModified DATE
+);
+
+CREATE TABLE Accounts (
+    AccountID NUMBER PRIMARY KEY,
+    CustomerID NUMBER,
+    AccountType VARCHAR2(20),
+    Balance NUMBER,
+    LastModified DATE,
+    FOREIGN KEY (CustomerID)
+    REFERENCES Customers(CustomerID)
+);
+
+CREATE TABLE Employees (
+    EmployeeID NUMBER PRIMARY KEY,
+    Name VARCHAR2(100),
+    Position VARCHAR2(50),
+    Salary NUMBER,
+    Department VARCHAR2(50),
+    HireDate DATE
+);
+
+------------------------------------------------------------
+-- STEP 2 : INSERT SAMPLE DATA
+------------------------------------------------------------
+
+-----------------------
+-- Customers
+-----------------------
+
+INSERT INTO Customers
+VALUES
+(1,'John Doe',
+TO_DATE('1985-05-15','YYYY-MM-DD'),
+1000,
+SYSDATE);
+
+INSERT INTO Customers
+VALUES
+(2,'Jane Smith',
+TO_DATE('1990-07-20','YYYY-MM-DD'),
+1500,
+SYSDATE);
+
+INSERT INTO Customers
+VALUES
+(3,'Ramesh',
+TO_DATE('1950-05-10','YYYY-MM-DD'),
+15000,
+SYSDATE);
+
+INSERT INTO Customers
+VALUES
+(4,'Sita',
+TO_DATE('1960-08-15','YYYY-MM-DD'),
+20000,
+SYSDATE);
+
+-----------------------
+-- Accounts
+-----------------------
+
+INSERT INTO Accounts
+VALUES
+(1,1,'Savings',10000,SYSDATE);
+
+INSERT INTO Accounts
+VALUES
+(2,2,'Checking',8000,SYSDATE);
+
+INSERT INTO Accounts
+VALUES
+(3,3,'Savings',25000,SYSDATE);
+
+INSERT INTO Accounts
+VALUES
+(4,4,'Savings',30000,SYSDATE);
+
+-----------------------
+-- Employees
+-----------------------
+
+INSERT INTO Employees
+VALUES
+(1,'Alice Johnson',
+'Manager',
+70000,
+'HR',
+TO_DATE('2015-06-15','YYYY-MM-DD'));
+
+INSERT INTO Employees
+VALUES
+(2,'Bob Brown',
+'Developer',
+60000,
+'IT',
+TO_DATE('2017-03-20','YYYY-MM-DD'));
+
+INSERT INTO Employees
+VALUES
+(3,'Rahul Sharma',
+'Developer',
+50000,
+'IT',
+TO_DATE('2020-01-10','YYYY-MM-DD'));
+
+INSERT INTO Employees
+VALUES
+(4,'Priya Singh',
+'Analyst',
+45000,
+'Finance',
+TO_DATE('2021-06-15','YYYY-MM-DD'));
+
+COMMIT;
+
+------------------------------------------------------------
+-- VERIFY INSERTED DATA
+------------------------------------------------------------
+
+SELECT * FROM Customers;
+SELECT * FROM Accounts;
+SELECT * FROM Employees;
+
+------------------------------------------------------------
+-- SCENARIO 1
+-- Process Monthly Interest
+------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE ProcessMonthlyInterest
+IS
+BEGIN
+
+    UPDATE Accounts
+    SET Balance = Balance + (Balance * 0.01)
+    WHERE AccountType='Savings';
+
+    COMMIT;
+
+    DBMS_OUTPUT.PUT_LINE('Monthly Interest Processed Successfully');
+
+END;
+/
+
+------------------------------------------------------------
+-- EXECUTE PROCEDURE
+------------------------------------------------------------
+
+BEGIN
+    ProcessMonthlyInterest;
+END;
+/
+
+------------------------------------------------------------
+-- VERIFY RESULT
+------------------------------------------------------------
+
+SELECT *
+FROM Accounts;
+
+------------------------------------------------------------
+-- SCENARIO 2
+-- Update Employee Bonus
+------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE UpdateEmployeeBonus
+(
+    p_department IN VARCHAR2,
+    p_bonus IN NUMBER
+)
+IS
+BEGIN
+
+    UPDATE Employees
+    SET Salary = Salary + (Salary * p_bonus/100)
+    WHERE Department = p_department;
+
+    COMMIT;
+
+    DBMS_OUTPUT.PUT_LINE('Employee Bonus Updated Successfully');
+
+END;
+/
+
+------------------------------------------------------------
+-- EXECUTE PROCEDURE
+------------------------------------------------------------
+
+BEGIN
+    UpdateEmployeeBonus('IT',10);
+END;
+/
+
+------------------------------------------------------------
+-- VERIFY RESULT
+------------------------------------------------------------
+
+SELECT *
+FROM Employees;
+
+------------------------------------------------------------
+-- SCENARIO 3
+-- Transfer Funds
+------------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE TransferFunds
+(
+    p_fromAccount IN NUMBER,
+    p_toAccount IN NUMBER,
+    p_amount IN NUMBER
+)
+IS
+
+    v_balance NUMBER;
+
+BEGIN
+
+    --------------------------------------------------------
+    -- Read balance of source account
+    --------------------------------------------------------
+
+    SELECT Balance
+    INTO v_balance
+    FROM Accounts
+    WHERE AccountID = p_fromAccount;
+
+    --------------------------------------------------------
+    -- Check balance
+    --------------------------------------------------------
+
+    IF v_balance >= p_amount THEN
+
+        ----------------------------------------------------
+        -- Debit Source Account
+        ----------------------------------------------------
+
+        UPDATE Accounts
+        SET Balance = Balance - p_amount
+        WHERE AccountID = p_fromAccount;
+
+        ----------------------------------------------------
+        -- Credit Destination Account
+        ----------------------------------------------------
+
+        UPDATE Accounts
+        SET Balance = Balance + p_amount
+        WHERE AccountID = p_toAccount;
+
+        COMMIT;
+
+        DBMS_OUTPUT.PUT_LINE('Transfer Successful');
+
+    ELSE
+
+        DBMS_OUTPUT.PUT_LINE('Insufficient Balance');
+
+    END IF;
+
+EXCEPTION
+
+    WHEN NO_DATA_FOUND THEN
+
+        DBMS_OUTPUT.PUT_LINE('Account Not Found');
+
+    WHEN OTHERS THEN
+
+        ROLLBACK;
+
+        DBMS_OUTPUT.PUT_LINE(SQLERRM);
+
+END;
+/
+
+------------------------------------------------------------
+-- EXECUTE PROCEDURE
+------------------------------------------------------------
+
+BEGIN
+    TransferFunds(1,2,500);
+END;
+/
+
+------------------------------------------------------------
+-- VERIFY RESULT
+------------------------------------------------------------
+
+SELECT *
+FROM Accounts;
+
+------------------------------------------------------------
+-- END OF EXERCISE
+------------------------------------------------------------
